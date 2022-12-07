@@ -11,7 +11,7 @@ class LegalEvalModel(nn.Module):
         super(LegalEvalModel, self).__init__() 
         mconfig = AutoConfig.from_pretrained(
             config['model_name'],
-            num_labels=12
+            num_labels=13
         )
         self.model = AutoModelForSequenceClassification.from_pretrained(
             config['model_name'],

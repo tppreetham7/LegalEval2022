@@ -6,11 +6,10 @@ import random
 
 config = {
     "num_epochs": 5,
-    "batch_size": 64,
+    "batch_size": 8,
     "learning_rate": 4e-5,
     "optimizer": optim.AdamW,
     'model_name': 'bert-base-uncased',
-    'folds': 5,
     'scheduler': torch.optim.lr_scheduler.OneCycleLR,
     'weight_decay': 0.001
 }

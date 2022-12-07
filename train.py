@@ -50,6 +50,7 @@ def train():
         preds, actual = [], []
         
         for b_id, td in enumerate(tqdm(train_dataloader)):
+            # print(b_id, td['text'], len(td['text']))
             train_label = td['label'].to(device)
             mask = td['attention_mask'].to(device)
             input_id = td['input_ids'].squeeze(1).to(device)
@@ -57,7 +58,10 @@ def train():
             with torch.set_grad_enabled(True):
                 with torch.cuda.amp.autocast():
                     output = model(input_id, mask)
+                    # print(output, train_label.squeeze().long())
+                    # assert(len(output) == len(train_label))
                     batch_loss = criterion(output, train_label.long())
+                # print(batch_loss)
                 total_loss_train += batch_loss.item()
                 train_loss_epoch.append(batch_loss.item())
 

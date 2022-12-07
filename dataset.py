@@ -24,7 +24,7 @@ class LegalEvalDataset(torch.utils.data.Dataset):
     '''
         Holds the dataset and also does the tokenization part
     '''
-    def __init__(self, df, max_len=300):
+    def __init__(self, df, max_len=512):
         self.df = df
         self.max_len = max_len
         le = preprocessing.LabelEncoder()
