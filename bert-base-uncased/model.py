@@ -18,6 +18,7 @@ class LegalEvalModel(nn.Module):
             from_tf=bool(".ckpt" in "../models/"),
             config=mconfig
         )
+        
         self.relu = nn.ReLU()
 
     def forward(self, input_ids, attention_mask):
