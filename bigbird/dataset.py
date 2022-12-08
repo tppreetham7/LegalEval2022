@@ -1,7 +1,7 @@
 import json
 from urllib.request import urlopen
 import torch
-from transformers import LongformerTokenizer, AutoTokenizer
+from transformers import AutoTokenizer
 import pandas as pd
 from config import config
 from sklearn import preprocessing
@@ -18,19 +18,19 @@ def json_to_df(t_json):
             if len(line['value']['labels'])>0 else 'NONE'})
         docs.append(doc)
     docs_df = pd.json_normalize([item for sublist in docs for item in sublist])
-    return docs_df
+    return docs_df[:100]
 
 class LegalEvalDataset(torch.utils.data.Dataset):
     '''
         Holds the dataset and also does the tokenization part
     '''
-    def __init__(self, df, max_len=1024):
+    def __init__(self, df, max_len=512):
         self.df = df
         self.max_len = max_len
         le = preprocessing.LabelEncoder()
         self.labels = le.fit(self.df.label).classes_
         self.df.label = le.transform(self.df.label)
-        self.tokenizer =  AutoTokenizer.from_pretrained("jpwahle/longformer-base-plagiarism-detection")
+        self.tokenizer =  AutoTokenizer.from_pretrained(config['model_name'], do_lower_case = True, use_fast = False)
 
     def __len__(self):
         return len(self.df)

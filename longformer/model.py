@@ -1,5 +1,5 @@
 import torch.nn as nn
-from transformers import AutoConfig
+from transformers import AutoConfig, AutoModel
 from transformers import LongformerModel, LongformerConfig
 from config import config
 import sklearn
@@ -10,7 +10,7 @@ class LFModel(nn.Module):
     def __init__(self):
         super(LFModel, self).__init__() 
         #configuration = LongformerConfig(attention_window = 512)
-        self.model = LongformerModel.from_pretrained("allenai/longformer-base-4096")
+        self.model = AutoModel.from_pretrained("jpwahle/longformer-base-plagiarism-detection")
         
         self.dropout = nn.Dropout(0.2)
         self.fc1 = nn.Linear(768, 512)

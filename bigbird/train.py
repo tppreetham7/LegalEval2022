@@ -2,27 +2,13 @@ from tqdm import tqdm
 from config import config
 import pandas as pd
 import torch
-from model import LFModel
+from model import BBEvalModel
 from utils import loss_fn, score, multi_acc, dump_dict
 from dataset import get_train_val_loaders
 import gc
 import numpy as np
 from sklearn.model_selection import train_test_split
 from transformers import logging
-
-
-class EarlyStopping():
-    def __init__(self, tolerance=2, min_delta=0):
-        self.tolerance = tolerance
-        self.min_delta = min_delta
-        self.counter = 0
-        self.early_stop = False
-
-    def __call__(self, train_loss, validation_loss):
-        if (validation_loss - train_loss) > self.min_delta:
-            self.counter +=1
-            if self.counter >= self.tolerance:  
-                self.early_stop = True
 
 def train():
     '''
@@ -32,7 +18,7 @@ def train():
     device = torch.device("cuda" if use_cuda else "cpu")
     scaler = torch.cuda.amp.GradScaler()
 
-    model = LFModel()
+    model = BBEvalModel()
 
     train_loss_epoch, val_loss_epoch = [], []
     optimizer = config['optimizer'](model.parameters(), lr=config['learning_rate'], betas=(0.9, 0.999))
@@ -56,8 +42,6 @@ def train():
         "val": []
     }
 
-    early_stopping = EarlyStopping(tolerance=5, min_delta=10)
-
     for epoch_num in range(config['num_epochs']):
         total_loss_train = 0
         accum_iter = 4
@@ -66,26 +50,29 @@ def train():
         preds, actual = [], []
         
         for b_id, td in enumerate(tqdm(train_dataloader)):
+            # print(b_id, td['text'], len(td['text']))
             train_label = td['label'].to(device)
             mask = td['attention_mask'].to(device)
             input_id = td['input_ids'].squeeze(1).to(device)
 
             with torch.set_grad_enabled(True):
                 with torch.cuda.amp.autocast():
-                    output = model(input_id, mask)
-                    batch_loss = criterion(output, train_label.long())
+                    output, batch_loss = model(input_id, mask, labels=train_label)
+                    # print(output, train_label.squeeze().long())
+                    # assert(len(output) == len(train_label))
+                    # batch_loss = criterion(output, train_label.long())
+                # print(batch_loss)
                 total_loss_train += batch_loss.item()
                 train_loss_epoch.append(batch_loss.item())
 
-                #log_softmax = torch.log_softmax(output, dim=1).cpu().detach()
-
-                tor_max = torch.max(output.cpu().detach(), dim=1)[1]
-                preds.append(tor_max.numpy())
+                #print(torch.max(output, dim = 1)[1])
+                preds.append(torch.max(output, dim = 1)[1].cpu().detach().numpy())
                 actual.append(train_label.long().cpu().detach().numpy())
 
                 model.zero_grad()
                 batch_loss /= accum_iter
                 scaler.scale(batch_loss).backward()
+                #scheduler.step()
 
                 if ((b_id + 1) % accum_iter == 0) or (b_id + 1 == len(train_dataloader)):
                     scaler.step(optimizer)
@@ -95,8 +82,8 @@ def train():
                 gc.collect()
                 torch.cuda.empty_cache()
 
+        #print(preds,actual)
         train_metrics = score(np.concatenate(preds),np.concatenate(actual))
-        #print(len(np.concatenate(preds)), len(np.concatenate(actual)))
         train_acc = multi_acc(np.concatenate(preds),np.concatenate(actual))
         total_loss_val = 0
         preds, actual = [], []
@@ -108,26 +95,19 @@ def train():
                 mask = val_input['attention_mask'].to(device)
                 input_id = val_input['input_ids'].squeeze(1).to(device)
 
-                output = model(input_id, mask)
+                output, loss = model(input_id, mask, val_label)
 
-                #torch.log_softmax(output, dim=1).cpu().detach()
-                preds.append(torch.max(output.cpu().detach(),dim=1)[1].numpy())
+                preds.append(torch.max(output, dim = 1)[1].cpu().detach().numpy())
                 actual.append(val_label.long().cpu().detach().numpy())
 
 
-                batch_loss = criterion(output, val_label.long())
+                batch_loss = loss
                 total_loss_val += batch_loss.item()
                 val_loss_epoch.append(batch_loss.item())
                 
         val_metrics = score(np.concatenate(preds),np.concatenate(actual))
         val_acc = multi_acc(np.concatenate(preds),np.concatenate(actual))
         
-        train_loss, val_loss = total_loss_train / len(train_dataloader.dataset), total_loss_val / len(val_dataloader.dataset)
-        early_stopping(train_loss, val_loss)
-        if early_stopping.early_stop:
-            print("#########################")
-            print(f"We are at epoch: {epoch_num+1} and are stopping")
-            break
 
         
         f1_met['train'].append(train_metrics[2])
@@ -144,9 +124,9 @@ def train():
             | Val Accuracy: {val_acc} \
             | Val Metrics (Precision, Recall, F1-Score): {val_metrics}')
             
-        torch.save(model.state_dict(), f"./models/longformer_epoch{epoch_num+1}.pth")
+        torch.save(model.state_dict(), f"./models/bb_epoch{epoch_num+1}.pth")
                 
-    dump_dict(f1_met, loss_met, f"longformer_epoch{epoch_num + 1}")        
+    dump_dict(f1_met, loss_met, f"bb_epoch{epoch_num + 1}")        
     return
 
 if __name__ == '__main__':
