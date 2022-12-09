@@ -56,7 +56,8 @@ class LegalEvalDataset(torch.utils.data.Dataset):
             text=text,
             input_ids=encoding["input_ids"].flatten(),
             attention_mask=encoding["attention_mask"].flatten(),
-            label=label
+            label=label,
+            len_tokens = encoding["input_ids"].flatten().shape[0]
         )
 
 def get_train_val_loaders(batch_size=8):

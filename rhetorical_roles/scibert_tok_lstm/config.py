@@ -9,7 +9,8 @@ config = {
     "batch_size": 16,
     "learning_rate": 4e-5,
     "optimizer": optim.AdamW,
-    'model_name': 'bert-base-uncased',
+    'model_name': 'allenai/scibert_scivocab_uncased',
+    'output_size': 13,
     # 'scheduler': torch.optim.lr_scheduler.OneCycleLR,
     'weight_decay': 0.001
 }
