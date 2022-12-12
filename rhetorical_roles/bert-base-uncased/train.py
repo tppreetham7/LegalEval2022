@@ -41,6 +41,10 @@ def train():
         "train": [],
         "val": []
     }
+    acc_met = {
+        "train": [],
+        "val": []
+    }
 
     for epoch_num in range(config['num_epochs']):
         total_loss_train = 0
@@ -111,8 +115,10 @@ def train():
 
         
         f1_met['train'].append(train_metrics[2])
+        acc_met['train'].append(train_acc)
         loss_met['train'].append(total_loss_train / len(train_dataloader.dataset))
         f1_met['val'].append(val_metrics[2])
+        acc_met['val'].append(val_acc)
         loss_met['val'].append(total_loss_val / len(val_dataloader.dataset))
 
 
@@ -126,7 +132,7 @@ def train():
             
         torch.save(model.state_dict(), f"./models/bert_epoch{epoch_num+1}.pth")
                 
-    dump_dict(f1_met, loss_met, f"bert_epoch{epoch_num + 1}")        
+    dump_dict(f1_met, loss_met, acc_met, f"bert_epoch{epoch_num + 1}")
     return
 
 if __name__ == '__main__':

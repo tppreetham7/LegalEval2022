@@ -41,6 +41,10 @@ def train():
         "train": [],
         "val": []
     }
+    acc_met = {
+        "train": [],
+        "val": []
+    }
 
     for epoch_num in range(config['num_epochs']):
         total_loss_train = 0
@@ -50,15 +54,18 @@ def train():
         preds, actual = [], []
         
         for b_id, td in enumerate(tqdm(train_dataloader)):
+            # print(b_id, td['text'], len(td['text']))
             train_label = td['label'].to(device)
             mask = td['attention_mask'].to(device)
             input_id = td['input_ids'].squeeze(1).to(device)
-            len_tokens = td['len_tokens']
 
             with torch.set_grad_enabled(True):
                 with torch.cuda.amp.autocast():
-                    output = model(input_id, mask, len_tokens)
+                    output = model(input_id, mask)
+                    # print(output, train_label.squeeze().long())
+                    # assert(len(output) == len(train_label))
                     batch_loss = criterion(output, train_label.long())
+                # print(batch_loss)
                 total_loss_train += batch_loss.item()
                 train_loss_epoch.append(batch_loss.item())
 
@@ -70,6 +77,7 @@ def train():
                 model.zero_grad()
                 batch_loss /= accum_iter
                 scaler.scale(batch_loss).backward()
+                #scheduler.step()
 
                 if ((b_id + 1) % accum_iter == 0) or (b_id + 1 == len(train_dataloader)):
                     scaler.step(optimizer)
@@ -90,9 +98,8 @@ def train():
                 val_label = val_input['label'].to(device)
                 mask = val_input['attention_mask'].to(device)
                 input_id = val_input['input_ids'].squeeze(1).to(device)
-                len_tokens = val_input['len_tokens']
 
-                output = model(input_id, mask, len_tokens)
+                output = model(input_id, mask)
 
                 preds.append(torch.max(torch.log_softmax(output, dim=1).cpu().detach(),dim=1)[1].numpy())
                 actual.append(val_label.long().cpu().detach().numpy())
@@ -108,8 +115,10 @@ def train():
 
         
         f1_met['train'].append(train_metrics[2])
+        acc_met['train'].append(train_acc)
         loss_met['train'].append(total_loss_train / len(train_dataloader.dataset))
         f1_met['val'].append(val_metrics[2])
+        acc_met['val'].append(val_acc)
         loss_met['val'].append(total_loss_val / len(val_dataloader.dataset))
 
 
@@ -121,9 +130,9 @@ def train():
             | Val Accuracy: {val_acc} \
             | Val Metrics (Precision, Recall, F1-Score): {val_metrics}')
             
-        torch.save(model.state_dict(), f"./models/scibert_lstm_epoch{epoch_num+1}.pth")
+        torch.save(model.state_dict(), f"./models/legal-bert_epoch{epoch_num+1}.pth")
                 
-    dump_dict(f1_met, loss_met, f"scibert_lstm_epoch{epoch_num + 1}")        
+    dump_dict(f1_met, loss_met, acc_met, f"legal-bert_epoch{epoch_num + 1}")
     return
 
 if __name__ == '__main__':

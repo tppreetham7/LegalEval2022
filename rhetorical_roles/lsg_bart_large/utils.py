@@ -1,5 +1,5 @@
 
-import sklearn
+import sklearn.metrics
 import numpy as np
 import torch.nn as nn
 import pickle
@@ -24,12 +24,14 @@ def loss_fn():
 
 
 def dump_dict(f1_met, loss_met, acc_met, langu):
+    print('Hello')
     with open(f'./results/f1_met_{langu}.pkl', 'wb') as f:
+        print('dump')
         pickle.dump(f1_met, f)
     
     with open(f'./results/acc_met_{langu}.pkl', 'wb') as f:
         pickle.dump(acc_met, f)
-        
+
     with open(f'./results/loss_met_{langu}.pkl', 'wb') as f:
         pickle.dump(loss_met, f)
     
